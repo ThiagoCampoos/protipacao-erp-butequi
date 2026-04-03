@@ -1,0 +1,5 @@
+{
+  "name": "Doca das Porções",
+  "description": "Um aplicativo híbrido mobile/desktop para gerenciar mesas de restaurante, comandas de clientes e pagamentos com taxa de serviço dinâmica.",
+  "requestFramePermissions": []
+}
