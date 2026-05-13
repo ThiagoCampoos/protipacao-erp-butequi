@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import AdminSidebar from "./AdminSidebar";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import { 
   LayoutDashboard, 
   LayoutGrid, 
@@ -13,73 +15,87 @@ import {
   Search,
   Bell,
   Save,
-  Info
+  Info,
+  Users
 } from "lucide-react";
 
 export default function AdminWaiterSetup() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditing = !!id;
+
+  const [name, setName] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [commissionRate, setCommissionRate] = useState(10);
+  const [active, setActive] = useState(true);
+
+  useEffect(() => {
+    if (isEditing) {
+      fetch("/api/waiters")
+        .then(res => res.json())
+        .then(data => {
+          const waiter = data.find((w: any) => w.id === parseInt(id));
+          if (waiter) {
+            setName(waiter.name);
+            setCpf(waiter.cpf);
+            setPhone(waiter.phone);
+            setEmail(waiter.email);
+            setUsername(waiter.username);
+            setPassword(waiter.password);
+            setCommissionRate(waiter.commission_rate);
+            setActive(waiter.active);
+          }
+        });
+    }
+  }, [id, isEditing]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !username || !password) {
+      alert("Por favor, preencha nome, usuário e senha.");
+      return;
+    }
+
+    const waiterData = {
+      name,
+      cpf,
+      phone,
+      email,
+      username,
+      password,
+      commission_rate: commissionRate,
+      active
+    };
+
+    try {
+      const url = isEditing ? `/api/waiters/${id}` : "/api/waiters";
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(waiterData)
+      });
+
+      if (res.ok) {
+        navigate("/admin/settings"); // Or wherever the waiters list is linked from
+      } else {
+        alert("Erro ao salvar garçom.");
+      }
+    } catch (error) {
+      console.error("Error saving waiter:", error);
+      alert("Erro ao salvar garçom.");
+    }
+  };
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-zinc-200 flex flex-col hidden md:flex sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-3 border-b border-zinc-100">
-          <div className="w-10 h-10 bg-[#F25D27] rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/20">
-            <Utensils className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-zinc-900 leading-tight">Doca das Porções</h1>
-            <p className="text-[10px] text-[#F25D27] font-bold uppercase tracking-wider mt-0.5">Painel Administrativo</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-[#FFF5F0] hover:text-[#F25D27] rounded-lg transition-colors group">
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-sm font-medium">Visão Geral</span>
-          </Link>
-          <Link to="/admin/tables" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-[#FFF5F0] hover:text-[#F25D27] rounded-lg transition-colors group">
-            <LayoutGrid className="w-5 h-5" />
-            <span className="text-sm font-medium">Gerenciamento de Mesas</span>
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-[#FFF5F0] hover:text-[#F25D27] rounded-lg transition-colors group">
-            <ClipboardList className="w-5 h-5" />
-            <span className="text-sm font-medium">Pedidos</span>
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-[#FFF5F0] hover:text-[#F25D27] rounded-lg transition-colors group">
-            <BookOpen className="w-5 h-5" />
-            <span className="text-sm font-medium">Cardápio</span>
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-[#FFF5F0] hover:text-[#F25D27] rounded-lg transition-colors group">
-            <BarChart2 className="w-5 h-5" />
-            <span className="text-sm font-medium">Relatórios</span>
-          </Link>
-          <Link to="/admin/printers" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-[#FFF5F0] hover:text-[#F25D27] rounded-lg transition-colors group">
-            <Printer className="w-5 h-5" />
-            <span className="text-sm font-medium">Impressoras</span>
-          </Link>
-          
-          <div className="pt-4 mt-4 border-t border-zinc-100">
-            <Link to="/admin/settings" className="flex items-center gap-3 px-4 py-3 bg-[#FFF5F0] text-[#F25D27] rounded-lg transition-colors">
-              <Settings className="w-5 h-5" />
-              <span className="text-sm font-medium">Configurações</span>
-            </Link>
-          </div>
-        </nav>
-
-        <div className="p-4 border-t border-zinc-100">
-          <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold">
-              AD
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate text-zinc-900">Admin Doca</p>
-              <p className="text-xs text-zinc-500 truncate">admin@doca.com</p>
-            </div>
-            <button className="text-zinc-400 hover:text-[#F25D27] transition-colors p-1">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
@@ -87,7 +103,7 @@ export default function AdminWaiterSetup() {
         <header className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-8 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <UserPlus className="w-6 h-6 text-[#F25D27]" />
-            <h2 className="text-xl font-bold tracking-tight">Cadastro de Garçom</h2>
+            <h2 className="text-xl font-bold tracking-tight">{isEditing ? "Editar Garçom" : "Cadastro de Garçom"}</h2>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
@@ -108,17 +124,19 @@ export default function AdminWaiterSetup() {
         {/* Form Area */}
         <div className="p-8 max-w-4xl mx-auto w-full overflow-y-auto">
           <div className="mb-8">
-            <h3 className="text-3xl font-black text-zinc-900 tracking-tight">Novo Colaborador</h3>
-            <p className="text-zinc-500 mt-1 font-medium">Preencha as informações abaixo para registrar um novo garçom na plataforma.</p>
+            <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{isEditing ? "Editar Colaborador" : "Novo Colaborador"}</h3>
+            <p className="text-zinc-500 mt-1 font-medium">Preencha as informações abaixo para registrar um garçom na plataforma.</p>
           </div>
 
-          <form className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-8 space-y-8">
+          <form onSubmit={handleSave} className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-8 space-y-8">
             {/* Section: Personal Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="col-span-full">
-                <label className="block text-sm font-bold text-zinc-700 mb-2">Nome Completo</label>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Nome Completo <span className="text-rose-500">*</span></label>
                 <input 
                   type="text" 
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   placeholder="Ex: João da Silva Santos" 
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
                 />
@@ -128,6 +146,8 @@ export default function AdminWaiterSetup() {
                 <label className="block text-sm font-bold text-zinc-700 mb-2">CPF</label>
                 <input 
                   type="text" 
+                  value={cpf}
+                  onChange={e => setCpf(e.target.value)}
                   placeholder="000.000.000-00" 
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
                 />
@@ -137,6 +157,8 @@ export default function AdminWaiterSetup() {
                 <label className="block text-sm font-bold text-zinc-700 mb-2">Telefone</label>
                 <input 
                   type="tel" 
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
                   placeholder="(00) 00000-0000" 
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
                 />
@@ -146,19 +168,56 @@ export default function AdminWaiterSetup() {
                 <label className="block text-sm font-bold text-zinc-700 mb-2">E-mail</label>
                 <input 
                   type="email" 
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   placeholder="joao.silva@email.com" 
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
                 />
               </div>
+
+              <div className="col-span-full border-t border-zinc-100 pt-6 mt-2">
+                <h4 className="text-lg font-bold text-zinc-900 mb-4">Acesso ao Aplicativo (Mobile)</h4>
+              </div>
               
               <div>
-                <label className="block text-sm font-bold text-zinc-700 mb-2">PIN de Acesso (4 dígitos)</label>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Usuário <span className="text-rose-500">*</span></label>
+                <input 
+                  type="text" 
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="joao.silva" 
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Senha <span className="text-rose-500">*</span></label>
                 <input 
                   type="password" 
-                  maxLength={4}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="****" 
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all tracking-widest text-lg font-black"
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
                 />
+              </div>
+
+              <div className="col-span-full border-t border-zinc-100 pt-6 mt-2">
+                <h4 className="text-lg font-bold text-zinc-900 mb-4">Comissionamento</h4>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Taxa do Garçom (%)</label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    value={commissionRate}
+                    onChange={e => setCommissionRate(Number(e.target.value))}
+                    min="0"
+                    max="100"
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:border-[#F25D27] focus:ring-2 focus:ring-[#F25D27] outline-none transition-all font-medium"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">%</span>
+                </div>
               </div>
             </div>
 
@@ -167,14 +226,19 @@ export default function AdminWaiterSetup() {
               <div className="flex items-center gap-4">
                 <span className="text-sm font-bold text-zinc-700">Status do Colaborador:</span>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={active}
+                    onChange={e => setActive(e.target.checked)}
+                  />
                   <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F25D27]"></div>
-                  <span className="ml-3 text-sm font-bold text-zinc-900">Ativo</span>
+                  <span className="ml-3 text-sm font-bold text-zinc-900">{active ? 'Ativo' : 'Inativo'}</span>
                 </label>
               </div>
               
               <div className="flex items-center gap-3">
-                <Link to="/admin/settings" className="px-6 py-3 rounded-xl border border-zinc-200 text-zinc-700 font-bold hover:bg-zinc-50 transition-colors">
+                <Link to="/admin/waiters" className="px-6 py-3 rounded-xl border border-zinc-200 text-zinc-700 font-bold hover:bg-zinc-50 transition-colors">
                   Cancelar
                 </Link>
                 <button type="submit" className="px-8 py-3 rounded-xl bg-[#F25D27] hover:bg-[#E04D17] text-white font-bold shadow-sm shadow-orange-500/20 transition-all flex items-center gap-2">

@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import AdminSidebar from "./AdminSidebar";
+import React, { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router";
 import { 
   LayoutDashboard, 
   LayoutGrid, 
@@ -19,69 +21,90 @@ import {
 } from "lucide-react";
 
 export default function AdminProductSetup() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditing = !!id;
+
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(isEditing);
+
+  useEffect(() => {
+    if (isEditing) {
+      fetch("/api/menu")
+        .then(res => res.json())
+        .then(data => {
+          const product = data.find((p: any) => p.id === parseInt(id));
+          if (product) {
+            setName(product.name);
+            setCategory(product.category);
+            setPrice(product.price.toString());
+            setDescription(product.description || "");
+            setImageUrl(product.image_url || "");
+          }
+          setLoading(false);
+        });
+    }
+  }, [id, isEditing]);
+
+  const handleSave = async () => {
+    if (!name || !price || !category) {
+      alert("Preencha os campos obrigatórios (Nome, Categoria, Preço)");
+      return;
+    }
+
+    const payload = {
+      name,
+      category,
+      price: parseFloat(price),
+      description,
+      image_url: imageUrl
+    };
+
+    try {
+      const url = isEditing ? `/api/menu/${id}` : "/api/menu";
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        navigate("/admin/menu");
+      } else {
+        alert("Erro ao salvar produto");
+      }
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert("Erro ao salvar produto");
+    }
+  };
+
+  if (loading) return <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex items-center justify-center">Carregando...</div>;
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-72 flex-shrink-0 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 hidden md:flex">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#F25D27] flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-sm font-bold leading-tight uppercase tracking-wider text-[#F25D27]">Doca das Porções</h1>
-            <p className="text-xs text-zinc-500 font-medium">Admin Dashboard</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <LayoutDashboard className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Dashboard</span>
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-3 py-2.5 bg-[#FFF5F0] text-[#F25D27] rounded-xl transition-colors">
-            <Utensils className="w-5 h-5" />
-            <span className="text-sm font-medium">Produtos</span>
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <ClipboardList className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Pedidos</span>
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <BarChart2 className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Relatórios</span>
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <Settings className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Configurações</span>
-          </Link>
-        </nav>
-
-        <div className="p-4 border-t border-zinc-200">
-          <div className="flex items-center gap-3 p-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-              G
-            </div>
-            <div className="flex flex-col overflow-hidden">
-              <p className="text-xs font-bold truncate text-zinc-900">Gerente de Vendas</p>
-              <p className="text-[10px] text-zinc-500">Sair da conta</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 flex flex-col">
         {/* Header */}
         <header className="h-20 bg-white border-b border-zinc-200 flex items-center justify-between px-8 sticky top-0 z-10">
           <div className="flex flex-col">
-            <h2 className="text-xl font-black text-zinc-900">Cadastro de Produto</h2>
-            <p className="text-xs text-zinc-500 font-medium mt-0.5">Preencha os dados para adicionar um novo item ao cardápio</p>
+            <h2 className="text-xl font-black text-zinc-900">{isEditing ? "Editar Produto" : "Cadastro de Produto"}</h2>
+            <p className="text-xs text-zinc-500 font-medium mt-0.5">{isEditing ? "Atualize os dados do item do cardápio" : "Preencha os dados para adicionar um novo item ao cardápio"}</p>
           </div>
           <div className="flex gap-3">
             <Link to="/admin/menu" className="px-6 py-2.5 flex items-center justify-center rounded-xl border border-zinc-300 font-bold text-sm text-zinc-700 hover:bg-zinc-50 transition-colors">
               Cancelar
             </Link>
-            <button className="px-6 py-2.5 rounded-xl bg-[#F25D27] hover:bg-[#E04D17] text-white font-bold text-sm shadow-sm shadow-orange-500/20 transition-colors">
+            <button onClick={handleSave} className="px-6 py-2.5 rounded-xl bg-[#F25D27] hover:bg-[#E04D17] text-white font-bold text-sm shadow-sm shadow-orange-500/20 transition-colors">
               Salvar Produto
             </button>
           </div>
@@ -99,30 +122,38 @@ export default function AdminProductSetup() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">Nome do Produto</label>
+                <label className="text-sm font-bold text-zinc-700">Nome do Produto *</label>
                 <input 
                   type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Porção de Batata Rustica Especial" 
                   className="w-full h-11 px-4 rounded-xl border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-[#F25D27] focus:border-[#F25D27] outline-none transition-all font-medium"
                 />
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">Categoria</label>
-                <select className="w-full h-11 px-4 rounded-xl border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-[#F25D27] focus:border-[#F25D27] outline-none transition-all font-medium appearance-none">
-                  <option>Selecione uma categoria</option>
-                  <option>Porções de Peixe</option>
-                  <option>Porções de Carne</option>
-                  <option>Bebidas</option>
-                  <option>Sobremesas</option>
+                <label className="text-sm font-bold text-zinc-700">Categoria *</label>
+                <select 
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full h-11 px-4 rounded-xl border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-[#F25D27] focus:border-[#F25D27] outline-none transition-all font-medium appearance-none"
+                >
+                  <option value="">Selecione uma categoria</option>
+                  <option value="Food">Comida</option>
+                  <option value="Drinks">Bebidas</option>
+                  <option value="Desserts">Sobremesas</option>
+                  <option value="Specials">Especiais</option>
                 </select>
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">Preço de Venda (R$)</label>
+                <label className="text-sm font-bold text-zinc-700">Preço de Venda (R$) *</label>
                 <input 
                   type="number" 
                   step="0.01" 
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
                   placeholder="0,00" 
                   className="w-full h-11 px-4 rounded-xl border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-[#F25D27] focus:border-[#F25D27] outline-none transition-all font-medium"
                 />
@@ -142,6 +173,8 @@ export default function AdminProductSetup() {
                 <label className="text-sm font-bold text-zinc-700">Descrição</label>
                 <textarea 
                   rows={3} 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Descreva os ingredientes e detalhes do prato..." 
                   className="w-full p-4 rounded-xl border-zinc-200 bg-zinc-50 focus:ring-2 focus:ring-[#F25D27] focus:border-[#F25D27] outline-none transition-all font-medium resize-none"
                 ></textarea>
@@ -236,7 +269,7 @@ export default function AdminProductSetup() {
             <Link to="/admin/menu" className="px-8 py-3 rounded-xl border border-zinc-300 font-bold text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center justify-center">
               Descartar
             </Link>
-            <button className="px-8 py-3 rounded-xl bg-[#F25D27] hover:bg-[#E04D17] text-white font-bold shadow-sm shadow-orange-500/20 transition-all flex items-center gap-2">
+            <button onClick={handleSave} className="px-8 py-3 rounded-xl bg-[#F25D27] hover:bg-[#E04D17] text-white font-bold shadow-sm shadow-orange-500/20 transition-all flex items-center gap-2">
               <Check className="w-5 h-5" />
               Confirmar Cadastro
             </button>

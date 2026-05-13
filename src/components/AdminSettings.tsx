@@ -1,3 +1,4 @@
+import AdminSidebar from "./AdminSidebar";
 import { Link } from "react-router";
 import { 
   LayoutDashboard, 
@@ -15,70 +16,15 @@ import {
   Clock,
   Image as ImageIcon,
   History,
-  Info
+  Info,
+  Users
 } from "lucide-react";
 
 export default function AdminSettings() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-zinc-200 flex flex-col hidden md:flex sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F25D27] rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/20">
-            <Utensils className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-sm font-bold text-zinc-900 leading-tight">Doca das Porções</h1>
-            <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Painel Administrativo</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <LayoutDashboard className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Visão Geral</span>
-          </Link>
-          <Link to="/admin/tables" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <LayoutGrid className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Gerenciamento de Mesas</span>
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <ClipboardList className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Pedidos</span>
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <BookOpen className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Cardápio</span>
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <BarChart2 className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Relatórios</span>
-          </Link>
-          <Link to="/admin/printers" className="flex items-center gap-3 px-4 py-3 text-zinc-600 hover:bg-zinc-50 rounded-xl transition-colors group">
-            <Printer className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Impressoras</span>
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 px-4 py-3 bg-[#F25D27] text-white rounded-xl transition-colors shadow-sm shadow-orange-500/20">
-            <Settings className="w-5 h-5" />
-            <span className="text-sm font-bold">Configurações</span>
-          </Link>
-        </nav>
-
-        <div className="p-4 border-t border-zinc-200">
-          <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-              C
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold truncate text-zinc-900">Carlos Silva</p>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">Gerente</p>
-            </div>
-            <button className="text-zinc-400 hover:text-[#F25D27] transition-colors p-1">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">

@@ -1,3 +1,4 @@
+import AdminSidebar from "./AdminSidebar";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { 
@@ -13,7 +14,8 @@ import {
   Plus,
   Search,
   Edit2,
-  Trash2
+  Trash2,
+  Users
 } from "lucide-react";
 
 interface MenuItem {
@@ -30,6 +32,7 @@ export default function AdminMenu() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All Items");
+  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/menu")
@@ -64,56 +67,36 @@ export default function AdminMenu() {
     }
   };
 
+  const handleDeleteClick = (id: number) => {
+    setItemToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (itemToDelete === null) return;
+    try {
+      const res = await fetch(`/api/menu/${itemToDelete}`, {
+        method: "DELETE"
+      });
+      
+      if (res.ok) {
+        setMenuItems(items => items.filter(item => item.id !== itemToDelete));
+        setItemToDelete(null);
+      }
+    } catch (error) {
+      console.error("Error deleting item:", error);
+    }
+  };
+
+  const cancelDelete = () => {
+    setItemToDelete(null);
+  };
+
   if (loading) return <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex items-center justify-center">Carregando...</div>;
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-zinc-200 flex flex-col hidden md:flex">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F25D27] rounded-full flex items-center justify-center text-white shrink-0">
-            <Utensils className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-zinc-900 leading-tight">Doca das Porções</h1>
-            <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Admin Panel</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <LayoutDashboard className="w-5 h-5" />
-            Visão Geral
-          </Link>
-          <Link to="/admin/tables" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <LayoutGrid className="w-5 h-5" />
-            Gerenciamento de Mesas
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <ClipboardList className="w-5 h-5" />
-            Pedidos
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-4 py-3 bg-[#F25D27] text-white rounded-xl font-medium shadow-sm shadow-orange-500/20">
-            <BookOpen className="w-5 h-5" />
-            Cardápio
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <BarChart2 className="w-5 h-5" />
-            Relatórios
-          </Link>
-          <Link to="/admin/printers" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <Printer className="w-5 h-5" />
-            Impressoras
-          </Link>
-        </nav>
-
-        <div className="p-4 mt-auto border-t border-zinc-100">
-          <Link to="/admin/settings" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <Settings className="w-5 h-5" />
-            Configurações
-          </Link>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -224,10 +207,10 @@ export default function AdminMenu() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Link to={`/admin/menu/edit/${item.id}`} className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                             <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                          </Link>
+                          <button onClick={() => handleDeleteClick(item.id)} className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -252,6 +235,37 @@ export default function AdminMenu() {
 
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {itemToDelete !== null && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <h3 className="text-xl font-black text-zinc-900 mb-2">Excluir Produto</h3>
+              <p className="text-zinc-500 font-medium">
+                Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-3">
+              <button 
+                onClick={cancelDelete}
+                className="px-5 py-2.5 text-zinc-600 font-bold hover:bg-zinc-200 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-sm shadow-rose-500/20 transition-colors"
+              >
+                Sim, Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

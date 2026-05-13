@@ -1,3 +1,4 @@
+import AdminSidebar from "./AdminSidebar";
 import { Link } from "react-router";
 import { 
   LayoutDashboard, 
@@ -32,66 +33,7 @@ export default function AdminPrinters() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-zinc-200 flex flex-col hidden md:flex">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F25D27] rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/20">
-            <Utensils className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-zinc-900 leading-tight">Doca das Porções</h1>
-            <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Painel Administrativo</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors group">
-            <LayoutDashboard className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Visão Geral</span>
-          </Link>
-          <Link to="/admin/tables" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors group">
-            <LayoutGrid className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Gerenciamento de Mesas</span>
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors group">
-            <ClipboardList className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Pedidos</span>
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors group">
-            <BookOpen className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Cardápio</span>
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors group">
-            <BarChart2 className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-            <span className="text-sm font-medium">Relatórios</span>
-          </Link>
-          <Link to="/admin/printers" className="flex items-center gap-3 px-3 py-2.5 bg-[#FFF5F0] text-[#F25D27] rounded-lg transition-colors">
-            <Printer className="w-5 h-5" />
-            <span className="text-sm font-medium">Impressoras</span>
-          </Link>
-          
-          <div className="pt-4 mt-4 border-t border-zinc-100">
-            <Link to="/admin/settings" className="flex items-center gap-3 px-3 py-2.5 text-zinc-600 hover:bg-zinc-100 rounded-lg transition-colors group">
-              <Settings className="w-5 h-5 text-zinc-400 group-hover:text-[#F25D27]" />
-              <span className="text-sm font-medium">Configurações</span>
-            </Link>
-          </div>
-        </nav>
-
-        <div className="p-4 bg-zinc-50 m-4 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
-              R
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate">Ricardo Silva</p>
-              <p className="text-[10px] text-zinc-500">Gerente de Turno</p>
-            </div>
-            <button className="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">

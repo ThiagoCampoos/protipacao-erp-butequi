@@ -1,3 +1,4 @@
+import AdminSidebar from "./AdminSidebar";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { 
@@ -19,6 +20,7 @@ import {
   Timer,
   X,
   ChevronRight,
+  ChevronLeft,
   Search,
   Minus,
   Trash2,
@@ -85,10 +87,14 @@ export default function AdminTables() {
   const [selectedTableTabs, setSelectedTableTabs] = useState<ActiveTab[]>([]);
   const [selectedTabItems, setSelectedTabItems] = useState<TabItem[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [detailsView, setDetailsView] = useState<'main' | 'subtabs'>('main');
+  const [modalTab, setModalTab] = useState<'main' | 'subtabs'>('main');
+  const [subtabView, setSubtabView] = useState<'list' | 'details'>('list');
+  const [selectedTabId, setSelectedTabId] = useState<number | null>(null);
 
   const [isAddSubTabModalOpen, setIsAddSubTabModalOpen] = useState(false);
   const [newSubTabName, setNewSubTabName] = useState("");
+  const [newSubTabPhone, setNewSubTabPhone] = useState("");
+  const [newSubTabPeopleCount, setNewSubTabPeopleCount] = useState("1");
 
   const [isAddOrderModalOpen, setIsAddOrderModalOpen] = useState(false);
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
@@ -99,6 +105,13 @@ export default function AdminTables() {
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState("credit");
   const [checkoutAmount, setCheckoutAmount] = useState("");
   const [checkoutWarning, setCheckoutWarning] = useState("");
+
+  const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(false);
+  const [openingTableId, setOpeningTableId] = useState<number | null>(null);
+  const [openTableType, setOpenTableType] = useState<'main' | 'subtab'>('main');
+  const [openTableClientName, setOpenTableClientName] = useState("");
+  const [openTableClientPhone, setOpenTableClientPhone] = useState("");
+  const [openTablePeopleCount, setOpenTablePeopleCount] = useState("1");
 
   const fetchData = () => {
     Promise.all([
@@ -118,6 +131,13 @@ export default function AdminTables() {
   useEffect(() => {
     fetchData();
     fetch("/api/products").then(res => res.json()).then(data => setProducts(data));
+
+    // Polling to mockup WebSocket broadcast for real-time updates as requested
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleAddTable = async () => {
@@ -140,16 +160,36 @@ export default function AdminTables() {
     }
   };
 
-  const handleOpenTable = async (tableId: number) => {
+  const handleOpenTableClick = (tableId: number) => {
+    setOpeningTableId(tableId);
+    setOpenTableType('main');
+    setOpenTableClientName("");
+    setOpenTableClientPhone("");
+    setOpenTablePeopleCount("1");
+    setIsOpenTableModalOpen(true);
+  };
+
+  const handleConfirmOpenTable = async () => {
+    if (!openingTableId) return;
+    
+    if (openTableType === 'subtab') {
+      if (!openTableClientName || !openTableClientPhone || !openTablePeopleCount) {
+        return; // Basic validation
+      }
+    }
+
     try {
       await fetch("/api/tabs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          table_id: tableId,
-          client_name: "Comanda Principal"
+          table_id: openingTableId,
+          client_name: openTableType === 'main' ? (openTableClientName || "Comanda Principal") : openTableClientName,
+          client_phone: openTableClientPhone,
+          people_count: parseInt(openTablePeopleCount) || 1
         })
       });
+      setIsOpenTableModalOpen(false);
       fetchData();
     } catch (error) {
       console.error("Error opening table:", error);
@@ -160,7 +200,6 @@ export default function AdminTables() {
     setSelectedTable(table);
     setIsTableDetailsModalOpen(true);
     setDetailsLoading(true);
-    setDetailsView('main');
     
     try {
       // Fetch tabs for this table
@@ -168,17 +207,52 @@ export default function AdminTables() {
       const tabsData = await tabsRes.json();
       setSelectedTableTabs(tabsData);
 
-      // If there's a main tab, fetch its items
-      if (tabsData.length > 0) {
-        const mainTab = tabsData[0];
+      const mainTab = tabsData.find((t: ActiveTab) => t.client_name === "Comanda Principal") || tabsData[0];
+      
+      setModalTab('main');
+      setSubtabView('list');
+
+      if (mainTab) {
+        setSelectedTabId(mainTab.id);
         const tabDetailsRes = await fetch(`/api/tabs/${mainTab.id}`);
         const tabDetailsData = await tabDetailsRes.json();
         setSelectedTabItems(tabDetailsData.items || []);
       } else {
+        setSelectedTabId(null);
         setSelectedTabItems([]);
       }
     } catch (error) {
       console.error("Error fetching table details:", error);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const handleSwitchToMainTab = async () => {
+    setModalTab('main');
+    const mainTab = selectedTableTabs.find(t => t.client_name === "Comanda Principal") || selectedTableTabs[0];
+    if (mainTab) {
+      handleViewTabDetails(mainTab.id);
+    }
+  };
+
+  const handleSwitchToSubtabs = () => {
+    setModalTab('subtabs');
+    setSubtabView('list');
+  };
+
+  const handleViewTabDetails = async (tabId: number) => {
+    setDetailsLoading(true);
+    setSelectedTabId(tabId);
+    if (modalTab === 'subtabs') {
+      setSubtabView('details');
+    }
+    try {
+      const tabDetailsRes = await fetch(`/api/tabs/${tabId}`);
+      const tabDetailsData = await tabDetailsRes.json();
+      setSelectedTabItems(tabDetailsData.items || []);
+    } catch (error) {
+      console.error("Error fetching tab details:", error);
     } finally {
       setDetailsLoading(false);
     }
@@ -192,13 +266,21 @@ export default function AdminTables() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           table_id: selectedTable.id,
-          client_name: newSubTabName
+          client_name: newSubTabName,
+          client_phone: newSubTabPhone,
+          people_count: parseInt(newSubTabPeopleCount) || 1
         })
       });
       setIsAddSubTabModalOpen(false);
       setNewSubTabName("");
-      // Refresh details
-      handleViewDetails(selectedTable);
+      setNewSubTabPhone("");
+      setNewSubTabPeopleCount("1");
+      
+      // Refresh tabs list without resetting view
+      const tabsRes = await fetch(`/api/tables/${selectedTable.id}/tabs`);
+      const tabsData = await tabsRes.json();
+      setSelectedTableTabs(tabsData);
+      
       fetchData();
     } catch (error) {
       console.error("Error adding sub tab:", error);
@@ -206,14 +288,11 @@ export default function AdminTables() {
   };
 
   const handleAddOrder = async () => {
-    if (!selectedTable || currentOrderItems.length === 0) return;
-    
-    const mainTab = selectedTableTabs[0];
-    if (!mainTab) return;
+    if (!selectedTable || currentOrderItems.length === 0 || !selectedTabId) return;
 
     try {
       await Promise.all(currentOrderItems.map(item => 
-        fetch(`/api/tabs/${mainTab.id}/items`, {
+        fetch(`/api/tabs/${selectedTabId}/items`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -229,7 +308,7 @@ export default function AdminTables() {
       setOrderSearchQuery("");
       
       // Refresh details
-      handleViewDetails(selectedTable);
+      handleViewTabDetails(selectedTabId);
       fetchData();
     } catch (error) {
       console.error("Error adding order:", error);
@@ -360,60 +439,7 @@ export default function AdminTables() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-zinc-200 flex flex-col hidden md:flex">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F25D27] rounded-full flex items-center justify-center text-white">
-            <Utensils className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-zinc-900 leading-tight">Doca das Porções</h1>
-            <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Painel Administrativo</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <LayoutDashboard className="w-5 h-5" />
-            Visão Geral
-          </Link>
-          <Link to="/admin/tables" className="flex items-center gap-3 px-4 py-3 bg-[#F25D27] text-white rounded-xl font-medium shadow-sm shadow-orange-500/20">
-            <LayoutGrid className="w-5 h-5" />
-            Gerenciamento de Mesas
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <ClipboardList className="w-5 h-5" />
-            Pedidos
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <BookOpen className="w-5 h-5" />
-            Cardápio
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <BarChart2 className="w-5 h-5" />
-            Relatórios
-          </Link>
-          <Link to="/admin/printers" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <Printer className="w-5 h-5" />
-            Impressoras
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <Settings className="w-5 h-5" />
-            Configurações
-          </Link>
-        </nav>
-
-        <div className="p-4 mt-auto">
-          <div className="bg-zinc-50 rounded-xl p-3 flex items-center gap-3 border border-zinc-100">
-            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">
-              A
-            </div>
-            <div>
-              <p className="text-sm font-bold text-zinc-900">Admin Carlos</p>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Gerente</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -459,9 +485,11 @@ export default function AdminTables() {
           {/* Tables Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
             {tables.map(table => {
-              const tabDetails = getTableDetails(table.id);
+              const tableTabs = activeTabs.filter(t => t.table_id === table.id);
+              const tabDetails = tableTabs[0]; // main tab or first tab
+              const hasSubTabs = tableTabs.length > 1;
               const isOccupied = table.status === "Ocupada";
-              const isClosing = table.status === "Fechando"; // Assuming we might have this status
+              const isClosing = table.status === "Em Fechamento"; 
               const isFree = table.status === "Livre";
 
               let borderColor = "border-zinc-200";
@@ -471,7 +499,7 @@ export default function AdminTables() {
               let badgeLabel = table.status.toUpperCase();
               let actionBtnClass = "bg-zinc-100 text-zinc-900 hover:bg-zinc-200";
               let actionBtnText = "Ver Detalhes";
-              let actionBtnClick = () => handleViewDetails(table);
+              let actionBtnClick: () => void = () => handleViewDetails(table);
 
               if (isOccupied) {
                 borderColor = "border-zinc-200";
@@ -486,7 +514,7 @@ export default function AdminTables() {
                 badgeText = "text-emerald-600";
                 actionBtnClass = "bg-[#F25D27] text-white hover:bg-[#E04D17] font-bold shadow-sm shadow-orange-500/20";
                 actionBtnText = "Abrir Mesa";
-                actionBtnClick = () => handleOpenTable(table.id);
+                actionBtnClick = () => { handleOpenTableClick(table.id); };
               } else if (isClosing) {
                 borderColor = "border-zinc-200";
                 topBorderColor = "bg-amber-400";
@@ -498,12 +526,17 @@ export default function AdminTables() {
               }
 
               return (
-                <div key={table.id} className={`bg-white rounded-2xl border ${borderColor} shadow-sm overflow-hidden flex flex-col`}>
+                <div key={table.id} className={`bg-white rounded-2xl border ${borderColor} shadow-sm overflow-hidden flex flex-col relative`}>
+                  {hasSubTabs && (
+                    <div className="absolute top-3 left-3 bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-1 rounded-md tracking-wider shadow-sm z-10">
+                      {tableTabs.length} COMANDAS
+                    </div>
+                  )}
                   <div className={`h-1.5 w-full ${topBorderColor}`}></div>
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex justify-between items-start mb-6">
-                      <h3 className="text-xl font-black text-zinc-900">Mesa {table.table_number.toString().padStart(2, '0')}</h3>
-                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider ${badgeBg} ${badgeText}`}>
+                      <h3 className={`text-xl font-black text-zinc-900 ${hasSubTabs ? 'mt-4' : ''}`}>Mesa {table.table_number.toString().padStart(2, '0')}</h3>
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider ${badgeBg} ${badgeText} ${hasSubTabs ? 'mt-4' : ''}`}>
                         {badgeLabel}
                       </span>
                     </div>
@@ -652,25 +685,41 @@ export default function AdminTables() {
             
             <div className="flex border-b border-zinc-200">
               <button 
-                onClick={() => setDetailsView('main')}
-                className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${detailsView === 'main' ? 'border-[#F25D27] text-[#F25D27]' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                onClick={handleSwitchToMainTab}
+                className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${modalTab === 'main' ? 'border-[#F25D27] text-[#F25D27]' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
               >
-                Pedidos Principais
+                Mesa Principal
               </button>
               <button 
-                onClick={() => setDetailsView('subtabs')}
-                className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${detailsView === 'subtabs' ? 'border-[#F25D27] text-[#F25D27]' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                onClick={handleSwitchToSubtabs}
+                className={`flex-1 py-4 text-sm font-bold transition-colors border-b-2 ${modalTab === 'subtabs' ? 'border-[#F25D27] text-[#F25D27]' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
               >
-                Submesas / Comandas
+                Submesas
               </button>
             </div>
+
+            {modalTab === 'subtabs' && subtabView === 'details' && (
+              <div className="bg-zinc-50 px-6 py-3 border-b border-zinc-200 flex items-center gap-3">
+                <button 
+                  onClick={() => setSubtabView('list')}
+                  className="text-zinc-500 hover:text-zinc-700 transition-colors flex items-center gap-1 text-sm font-bold"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Voltar
+                </button>
+                <div className="h-4 w-px bg-zinc-300"></div>
+                <span className="text-sm font-bold text-zinc-900">
+                  {selectedTableTabs.find(t => t.id === selectedTabId)?.client_name || `Comanda #${selectedTabId}`}
+                </span>
+              </div>
+            )}
 
             <div className="p-6 overflow-y-auto flex-1">
               {detailsLoading ? (
                 <div className="flex justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F25D27]"></div>
                 </div>
-              ) : detailsView === 'main' ? (
+              ) : modalTab === 'main' || (modalTab === 'subtabs' && subtabView === 'details') ? (
                 <div className="space-y-4">
                   {selectedTabItems.length > 0 ? (
                     <div className="divide-y divide-zinc-100">
@@ -687,15 +736,19 @@ export default function AdminTables() {
                   ) : (
                     <div className="text-center py-12 text-zinc-500">
                       <Utensils className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                      <p className="font-medium">Nenhum pedido na comanda principal.</p>
+                      <p className="font-medium">Nenhum pedido nesta comanda.</p>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {selectedTableTabs.length > 0 ? (
-                    selectedTableTabs.map(tab => (
-                      <div key={tab.id} className="p-4 border border-zinc-200 rounded-xl flex items-center justify-between hover:border-[#F25D27]/30 transition-colors cursor-pointer">
+                  {selectedTableTabs.filter(t => t.client_name !== "Comanda Principal" && t !== selectedTableTabs[0]).length > 0 ? (
+                    selectedTableTabs.filter(t => t.client_name !== "Comanda Principal" && t !== selectedTableTabs[0]).map(tab => (
+                      <div 
+                        key={tab.id} 
+                        onClick={() => handleViewTabDetails(tab.id)}
+                        className="p-4 border border-zinc-200 rounded-xl flex items-center justify-between hover:border-[#F25D27]/30 transition-colors cursor-pointer"
+                      >
                         <div>
                           <p className="font-bold text-zinc-900">{tab.client_name || `Comanda #${tab.id}`}</p>
                           <p className="text-xs text-zinc-500 mt-1">Aberta às {new Date(tab.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -717,24 +770,40 @@ export default function AdminTables() {
             </div>
 
             <div className="p-6 border-t border-zinc-100 bg-zinc-50 flex justify-between gap-3">
+              {selectedTable.status === "Em Fechamento" && (
+                <button 
+                  onClick={async () => {
+                    await fetch(`/api/tables/${selectedTable.id}/cancel-closure`, { method: "POST" });
+                    setIsTableDetailsModalOpen(false);
+                    fetchData();
+                  }}
+                  className="px-5 py-2.5 text-amber-600 font-bold hover:bg-amber-50 rounded-xl transition-colors border border-amber-200"
+                >
+                  Cancelar Fechamento
+                </button>
+              )}
               <button 
                 onClick={handleOpenCheckout}
                 disabled={selectedTableTabs.length === 0}
                 className="px-5 py-2.5 text-rose-600 font-bold hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-50"
               >
-                Fechar Mesa
+                Fechar Mesa / Comandas
               </button>
               <button 
                 onClick={() => {
-                  if (detailsView === 'subtabs') {
+                  if (selectedTable.status === "Em Fechamento") {
+                    alert("Cancele o fechamento para poder adicionar novos pedidos/mesas.");
+                    return;
+                  }
+                  if (modalTab === 'subtabs' && subtabView === 'list') {
                     setIsAddSubTabModalOpen(true);
                   } else {
                     setIsAddOrderModalOpen(true);
                   }
                 }}
-                className="px-5 py-2.5 bg-[#F25D27] text-white font-bold rounded-xl hover:bg-[#E04D17] transition-colors"
+                className={`px-5 py-2.5 text-white font-bold rounded-xl transition-colors ${selectedTable.status === "Em Fechamento" ? "bg-zinc-400 cursor-not-allowed" : "bg-[#F25D27] hover:bg-[#E04D17]"}`}
               >
-                {detailsView === 'subtabs' ? 'Adicionar Submesa' : 'Adicionar Pedido'}
+                {modalTab === 'subtabs' && subtabView === 'list' ? 'Nova Submesa' : 'Adicionar Pedido'}
               </button>
             </div>
           </div>
@@ -910,15 +979,39 @@ export default function AdminTables() {
               </button>
             </div>
             
-            <div className="p-6">
-              <label className="block text-sm font-bold text-zinc-700 mb-2">Nome do Cliente / Identificação</label>
-              <input 
-                type="text" 
-                value={newSubTabName}
-                onChange={(e) => setNewSubTabName(e.target.value)}
-                placeholder="Ex: João, Casal, etc."
-                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
-              />
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Nome do Cliente / Identificação *</label>
+                <input 
+                  type="text" 
+                  value={newSubTabName}
+                  onChange={(e) => setNewSubTabName(e.target.value)}
+                  placeholder="Ex: João, Casal, etc."
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Telefone (Opcional)</label>
+                <input 
+                  type="text" 
+                  value={newSubTabPhone}
+                  onChange={(e) => setNewSubTabPhone(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-zinc-700 mb-2">Quantidade de Pessoas</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  value={newSubTabPeopleCount}
+                  onChange={(e) => setNewSubTabPeopleCount(e.target.value)}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
+                />
+              </div>
             </div>
 
             <div className="p-6 border-t border-zinc-100 bg-zinc-50 flex justify-end gap-3">
@@ -934,6 +1027,106 @@ export default function AdminTables() {
                 className="px-5 py-2.5 bg-[#F25D27] text-white font-bold rounded-xl hover:bg-[#E04D17] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Criar Submesa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Open Table Modal */}
+      {isOpenTableModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-white">
+              <h3 className="text-xl font-black text-zinc-900">Abrir Mesa</h3>
+              <button 
+                onClick={() => setIsOpenTableModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 transition-colors bg-zinc-100 hover:bg-zinc-200 p-2 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              
+              {/* Type Selection */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setOpenTableType('main')}
+                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${openTableType === 'main' ? 'border-[#F25D27] bg-orange-50/50 text-[#F25D27]' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'}`}
+                >
+                  <span className="font-bold">Comanda Principal</span>
+                </button>
+                <button
+                  onClick={() => setOpenTableType('subtab')}
+                  disabled={true}
+                  className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${openTableType === 'subtab' ? 'border-[#F25D27] bg-orange-50/50 text-[#F25D27]' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'} opacity-50 cursor-not-allowed`}
+                  title="Só é permitido abrir uma mesa individual se a comanda principal estiver aberta."
+                >
+                  <span className="font-bold">Criar Submesa</span>
+                  <span className="text-[10px] text-zinc-400 mt-1 leading-tight text-center">Requer comanda principal ativa</span>
+                </button>
+              </div>
+
+              {/* Form Fields */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 mb-2">
+                    Nome do Cliente {openTableType === 'main' && <span className="text-zinc-400 font-normal">(Opcional)</span>}
+                  </label>
+                  <input 
+                    type="text"
+                    value={openTableClientName}
+                    onChange={(e) => setOpenTableClientName(e.target.value)}
+                    placeholder="Ex: João Silva"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 mb-2">
+                    Telefone {openTableType === 'main' && <span className="text-zinc-400 font-normal">(Opcional)</span>}
+                  </label>
+                  <input 
+                    type="text"
+                    value={openTableClientPhone}
+                    onChange={(e) => setOpenTableClientPhone(e.target.value)}
+                    placeholder="Ex: (11) 99999-9999"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
+                  />
+                </div>
+
+                {openTableType === 'subtab' && (
+                  <div>
+                    <label className="block text-sm font-bold text-zinc-700 mb-2">
+                      Número de Pessoas
+                    </label>
+                    <input 
+                      type="number"
+                      min="1"
+                      value={openTablePeopleCount}
+                      onChange={(e) => setOpenTablePeopleCount(e.target.value)}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all"
+                    />
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            <div className="p-6 border-t border-zinc-200 bg-white flex gap-3">
+              <button 
+                onClick={() => setIsOpenTableModalOpen(false)}
+                className="flex-1 py-3 text-zinc-600 font-bold hover:bg-zinc-100 rounded-xl transition-colors border border-zinc-200"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleConfirmOpenTable}
+                disabled={openTableType === 'subtab' && (!openTableClientName || !openTableClientPhone || !openTablePeopleCount)}
+                className="flex-1 py-3 bg-[#F25D27] text-white font-bold rounded-xl hover:bg-[#E04D17] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-orange-500/20"
+              >
+                Confirmar
               </button>
             </div>
           </div>
@@ -976,7 +1169,7 @@ export default function AdminTables() {
                             <p className="font-bold text-zinc-900">{tab.client_name || `Comanda #${tab.id}`}</p>
                           </div>
                         </div>
-                        <span className="font-black text-zinc-900">R$ {tab.subtotal.toFixed(2).replace('.', ',')}</span>
+                        <span className="font-black text-zinc-900">R$ {tab.subtotal !== undefined ? tab.subtotal.toFixed(2).replace('.', ',') : "0,00"}</span>
                       </div>
                     );
                   })}
@@ -1021,7 +1214,7 @@ export default function AdminTables() {
                     type="number"
                     value={checkoutAmount}
                     onChange={(e) => setCheckoutAmount(e.target.value)}
-                    placeholder={selectedTableTabs.filter(t => checkoutSelectedTabs.includes(t.id)).reduce((sum, t) => sum + t.subtotal, 0).toFixed(2)}
+                    placeholder={selectedTableTabs.filter(t => checkoutSelectedTabs.includes(t.id)).reduce((sum, t) => sum + (t.subtotal || 0), 0).toFixed(2)}
                     className="w-full pl-12 pr-4 py-4 bg-zinc-50 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-[#F25D27]/50 focus:border-[#F25D27] outline-none transition-all text-xl font-black text-zinc-900"
                   />
                 </div>
@@ -1034,7 +1227,7 @@ export default function AdminTables() {
               <div className="flex justify-between items-center mb-4">
                 <span className="text-zinc-500 font-medium">Total Selecionado</span>
                 <span className="text-3xl font-black text-zinc-900">
-                  R$ {selectedTableTabs.filter(t => checkoutSelectedTabs.includes(t.id)).reduce((sum, t) => sum + t.subtotal, 0).toFixed(2).replace('.', ',')}
+                  R$ {selectedTableTabs.filter(t => checkoutSelectedTabs.includes(t.id)).reduce((sum, t) => sum + (t.subtotal || 0), 0).toFixed(2).replace('.', ',')}
                 </span>
               </div>
               <div className="flex gap-3">

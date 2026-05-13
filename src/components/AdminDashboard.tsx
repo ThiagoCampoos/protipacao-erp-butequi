@@ -1,3 +1,4 @@
+import AdminSidebar from "./AdminSidebar";
 import React, { useState } from "react";
 import { Link } from "react-router";
 import { 
@@ -23,7 +24,8 @@ import {
   Info,
   X,
   Edit2,
-  Trash2
+  Trash2,
+  Users
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -113,65 +115,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-zinc-900 flex font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-zinc-200 flex flex-col hidden md:flex">
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F25D27] rounded-full flex items-center justify-center text-white shrink-0">
-            <Utensils className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-zinc-900 leading-tight">Doca das Porções</h1>
-            <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Admin Dashboard</p>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <Link to="/admin" className="flex items-center gap-3 px-4 py-3 bg-[#FFF5F0] text-[#F25D27] rounded-xl font-bold">
-            <LayoutDashboard className="w-5 h-5" />
-            Visão Geral
-          </Link>
-          <Link to="/admin/tables" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <LayoutGrid className="w-5 h-5" />
-            Gerenciamento de Mesas
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <ClipboardList className="w-5 h-5" />
-            Pedidos
-          </Link>
-          <Link to="/admin/menu" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <BookOpen className="w-5 h-5" />
-            Cardápio
-          </Link>
-          <Link to="/admin/reports" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <BarChart2 className="w-5 h-5" />
-            Relatórios
-          </Link>
-          <Link to="/admin/printers" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <Printer className="w-5 h-5" />
-            Impressoras
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 px-4 py-3 text-zinc-500 hover:bg-zinc-50 rounded-xl font-medium transition-colors">
-            <Settings className="w-5 h-5" />
-            Configurações
-          </Link>
-        </nav>
-
-        <div className="p-4 mt-auto border-t border-zinc-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#74A877] rounded-full flex items-center justify-center text-white font-bold">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 opacity-50"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-zinc-900">Julio C.</p>
-                <p className="text-[10px] text-zinc-500 font-medium">Manager</p>
-              </div>
-            </div>
-            <button className="text-zinc-400 hover:text-zinc-600 transition-colors">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AdminSidebar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
